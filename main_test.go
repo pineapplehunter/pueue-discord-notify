@@ -65,11 +65,8 @@ func TestSendNotification(t *testing.T) {
 		t.Errorf("Color = %d", e.Color)
 	}
 
-	if len(e.Fields) != 1 {
-		t.Fatalf("expected 1 field (exit code; group default omitted), got %d", len(e.Fields))
-	}
-	if e.Fields[0].Name != "Exit Code" || e.Fields[0].Value != "0" {
-		t.Errorf("field 0 = %+v", e.Fields[0])
+	if len(e.Fields) != 0 {
+		t.Fatalf("expected 0 fields (exit code 0, group default), got %d", len(e.Fields))
 	}
 }
 
@@ -179,6 +176,31 @@ func TestExamplePueueCallback(t *testing.T) {
 	err := sendNotification(server.URL, "7", "ffmpeg -i input.mp4 output.mkv", "Success", "0", "video", "server-01")
 	if err != nil {
 		t.Fatalf("sendNotification failed: %v", err)
+	}
+}
+
+func TestSendNotificationNonZeroExitCode(t *testing.T) {
+	var received []byte
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		received, _ = io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+
+	err := sendNotification(server.URL, "5", "make build", "Failed", "2", "default", "srv")
+	if err != nil {
+		t.Fatalf("sendNotification failed: %v", err)
+	}
+
+	var payload WebhookPayload
+	json.Unmarshal(received, &payload)
+
+	fields := payload.Embeds[0].Fields
+	if len(fields) != 1 {
+		t.Fatalf("expected 1 field (non-zero exit code shown), got %d", len(fields))
+	}
+	if fields[0].Name != "Exit Code" || fields[0].Value != "2" {
+		t.Errorf("field 0 = %+v", fields[0])
 	}
 }
 

@@ -42,12 +42,13 @@ func resultColor(result string) int {
 
 func sendNotification(webhookURL, taskID, command, result, exitCode, group, host string) error {
 	desc := command
-	if len(desc) > 2000 {
-		desc = desc[:2000]
+	if len(desc) > 200 {
+		desc = desc[:200] + "..."
 	}
 
-	fields := []Field{
-		{Name: "Exit Code", Value: exitCode, Inline: true},
+	var fields []Field
+	if exitCode != "" && exitCode != "0" {
+		fields = append(fields, Field{Name: "Exit Code", Value: exitCode, Inline: true})
 	}
 	if group != "" && group != "default" {
 		fields = append(fields, Field{Name: "Group", Value: group, Inline: true})
