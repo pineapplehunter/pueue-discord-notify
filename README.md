@@ -46,18 +46,70 @@ daemon:
 
 Restart the daemon: `pueue daemon restart`.
 
-## Install
-
-### Nix
-
-```shell
-nix run github:your-user/pueue-discord-notify -- --help
-```
-
-Or add to your flake inputs:
+### NixOS / home-manager
 
 ```nix
-inputs.pueue-discord-notify.url = "github:your-user/pueue-discord-notify";
+{ pkgs, lib, config, ... }:
+
+{
+  services.pueue = {
+    enable = true;
+    settings.daemon = {
+      callback = lib.replaceString "\n" " " ''
+        "${lib.getExe pkgs.pueue-discord-notify}"
+        --webhook-file "${config.sops.secrets.pueue-discord-webhook.path}"
+        --id "{{id}}"
+        --command "{{command}}"
+        --result "{{result}}"
+        --exit-code "{{exit_code}}"
+        --group "{{group}}"
+      '';
+      callback_log_lines = 10;
+    };
+  };
+
+  sops.secrets.pueue-discord-webhook = {
+    key = "pueue-discord-webhook";
+  };
+}
+```
+
+The callback string uses `lib.replaceString` to collapse the multi-line
+expression into a single line (pueue expects a single-line callback command).
+
+The webhook URL is stored encrypted in a [sops](https://github.com/getsops/sops)
+secrets file:
+
+```yaml
+pueue-discord-webhook: ENC[AES256_GCM,data:...,type:str]
+```
+
+## Install
+
+### Flake input
+
+```nix
+inputs.pueue-discord-notify.url = "github:takata/pueue-discord-notify";
+```
+
+### Overlay package (from GitHub)
+
+```nix
+buildGoModule {
+  src = fetchFromGitHub {
+    owner = "takata";
+    repo = "pueue-discord-notify";
+    rev = "...";
+    hash = "...";
+  };
+  vendorHash = null;
+  doCheck = true;
+  checkPhase = ''
+    runHook preCheck
+    go test -v ./...
+    runHook postCheck
+  '';
+}
 ```
 
 ### Build from source
