@@ -46,8 +46,8 @@ func TestSendNotification(t *testing.T) {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
 
-	if payload.Content != "[myserver] Task #42 **Success**" {
-		t.Errorf("Content = %q", payload.Content)
+	if payload.Content != "" {
+		t.Errorf("Content = %q, want empty", payload.Content)
 	}
 
 	if len(payload.Embeds) != 1 {
@@ -55,7 +55,7 @@ func TestSendNotification(t *testing.T) {
 	}
 
 	e := payload.Embeds[0]
-	if e.Title != "[myserver] Task #42" {
+	if e.Title != "Task #42 Success [myserver]" {
 		t.Errorf("Title = %q", e.Title)
 	}
 	if e.Description != "```\necho hello\n```" {
@@ -65,20 +65,11 @@ func TestSendNotification(t *testing.T) {
 		t.Errorf("Color = %d", e.Color)
 	}
 
-	if len(e.Fields) != 4 {
-		t.Fatalf("expected 4 fields (host,result,exit,group), got %d", len(e.Fields))
+	if len(e.Fields) != 1 {
+		t.Fatalf("expected 1 field (exit code; group default omitted), got %d", len(e.Fields))
 	}
-	if e.Fields[0].Name != "Host" || e.Fields[0].Value != "myserver" || !e.Fields[0].Inline {
+	if e.Fields[0].Name != "Exit Code" || e.Fields[0].Value != "0" {
 		t.Errorf("field 0 = %+v", e.Fields[0])
-	}
-	if e.Fields[1].Name != "Result" || e.Fields[1].Value != "Success" {
-		t.Errorf("field 1 = %+v", e.Fields[1])
-	}
-	if e.Fields[2].Name != "Exit Code" || e.Fields[2].Value != "0" {
-		t.Errorf("field 2 = %+v", e.Fields[2])
-	}
-	if e.Fields[3].Name != "Group" || e.Fields[3].Value != "default" {
-		t.Errorf("field 3 = %+v", e.Fields[3])
 	}
 }
 
@@ -98,13 +89,16 @@ func TestSendNotificationWithoutGroup(t *testing.T) {
 	var payload WebhookPayload
 	json.Unmarshal(received, &payload)
 
-	if payload.Content != "[host-a] Task #1 **Failed**" {
-		t.Errorf("Content = %q", payload.Content)
+	if payload.Content != "" {
+		t.Errorf("Content = %q, want empty", payload.Content)
 	}
 
 	fields := payload.Embeds[0].Fields
-	if len(fields) != 3 {
-		t.Fatalf("expected 3 fields (host,result,exit; no group), got %d", len(fields))
+	if len(fields) != 1 {
+		t.Fatalf("expected 1 field (exit code; no group), got %d", len(fields))
+	}
+	if fields[0].Name != "Exit Code" || fields[0].Value != "1" {
+		t.Errorf("field 0 = %+v", fields[0])
 	}
 }
 

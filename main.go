@@ -47,22 +47,16 @@ func sendNotification(webhookURL, taskID, command, result, exitCode, group, host
 	}
 
 	fields := []Field{
-		{Name: "Result", Value: result, Inline: true},
 		{Name: "Exit Code", Value: exitCode, Inline: true},
 	}
-	if group != "" {
+	if group != "" && group != "default" {
 		fields = append(fields, Field{Name: "Group", Value: group, Inline: true})
 	}
 
-	fields = append([]Field{
-		{Name: "Host", Value: host, Inline: true},
-	}, fields...)
-
 	payload := WebhookPayload{
-		Content: fmt.Sprintf("[%s] Task #%s **%s**", host, taskID, result),
 		Embeds: []Embed{
 			{
-				Title:       fmt.Sprintf("[%s] Task #%s", host, taskID),
+				Title:       fmt.Sprintf("Task #%s %s [%s]", taskID, result, host),
 				Description: "```\n" + desc + "\n```",
 				Color:       resultColor(result),
 				Fields:      fields,
